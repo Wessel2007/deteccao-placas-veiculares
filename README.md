@@ -31,7 +31,7 @@ Sistema Inteligente de Abertura de Portão por Reconhecimento de Placas
 
 O **GateVision** é um sistema de automação para controle de acesso de veículos utilizando **visão computacional** e **reconhecimento de placas**.
 
-O sistema utiliza uma câmera para capturar imagens dos veículos que chegam ao portão. A partir dessas imagens, um algoritmo de processamento identifica a placa do veículo e verifica se ela está cadastrada em um banco de dados.
+O sistema utiliza uma câmera para capturar imagens dos veículos que chegam ao portão. A partir dessas imagens, um modelo **YOLO** treinado identifica e recorta a região da placa do veículo. Em seguida, o texto da placa é extraído por OCR e verificado em um banco de dados.
 
 Caso a placa esteja autorizada, um comando é enviado para um **Arduino**, que aciona um **servo motor responsável pela abertura do portão**.
 
@@ -53,16 +53,31 @@ Período de desenvolvimento:
 
 **Fevereiro de 2026 – Junho de 2026**
 
+### O que já está implementado
+
+- [x] Detecção de placas em imagens com modelo YOLO treinado (`models/best.pt`)
+- [x] Recorte automático da região da placa detectada
+
+### Próximas etapas
+
+- [ ] OCR para leitura dos caracteres da placa
+- [ ] Captura em tempo real via webcam
+- [ ] Banco de dados de placas autorizadas (SQLite)
+- [ ] Comunicação serial com Arduino
+- [ ] Interface web para cadastro de placas
+- [ ] Código do Arduino para acionamento do servo motor
+
 ---
 
 # Funcionalidades
 
-- `Reconhecimento de placas`: identificação automática da placa do veículo
-- `Captura de imagem`: utilização de webcam para captura em tempo real
-- `Validação de acesso`: consulta da placa em banco de dados
-- `Automação de portão`: acionamento automático via Arduino
-- `Interface web`: cadastro de placas autorizadas
-- `Protótipo físico`: simulação da abertura do portão com servo motor
+- `Detecção de placas`: identificação da região da placa em imagens usando YOLO
+- `Recorte da placa`: extração da área detectada para processamento posterior
+- `Reconhecimento de caracteres` *(planejado)*: leitura do texto da placa via OCR
+- `Captura em tempo real` *(planejado)*: utilização de webcam para captura contínua
+- `Validação de acesso` *(planejado)*: consulta da placa em banco de dados
+- `Automação de portão` *(planejado)*: acionamento automático via Arduino
+- `Interface web` *(planejado)*: cadastro de placas autorizadas
 
 ---
 
@@ -72,13 +87,14 @@ Fluxo de funcionamento do sistema:
 
 1. A webcam captura a imagem do veículo.
 2. O sistema em Python processa a imagem.
-3. O algoritmo detecta a região da placa.
-4. Um sistema de OCR extrai os caracteres.
-5. O banco de dados é consultado.
-6. Caso a placa esteja cadastrada:
-   - um comando é enviado via comunicação serial.
-7. O Arduino recebe o comando.
-8. O servo motor é acionado simulando a abertura do portão.
+3. O modelo YOLO detecta a região da placa.
+4. A imagem da placa é recortada.
+5. Um sistema de OCR extrai os caracteres.
+6. O banco de dados é consultado.
+7. Caso a placa esteja cadastrada:
+   - Um comando é enviado via comunicação serial.
+8. O Arduino recebe o comando.
+9. O servo motor é acionado simulando a abertura do portão.
 
 ---
 
@@ -87,16 +103,16 @@ Fluxo de funcionamento do sistema:
 ## Linguagens
 
 - Python
-- C++
-- HTML
-- CSS
+- C++ (Arduino)
+- HTML / CSS
 
 ## Bibliotecas
 
-- OpenCV
-- YOLO
-- OCR
-- SQLite3
+- [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) — detecção de objetos (YOLOv11)
+- [OpenCV](https://opencv.org/) — processamento de imagens
+- [PyTorch](https://pytorch.org/) — backend do modelo YOLO
+- [NumPy](https://numpy.org/) — manipulação de arrays
+- SQLite3 *(planejado)* — banco de dados local
 
 ## Hardware
 
@@ -108,7 +124,7 @@ Fluxo de funcionamento do sistema:
 ## Ferramentas
 
 - Arduino IDE
-- Python
+- Python 3.x
 
 ---
 
@@ -120,61 +136,81 @@ Você pode acessar o repositório do projeto através do GitHub:
 
 ---
 
-#  Executar o Projeto
+# Executar o Projeto
 
-### 1 Instalar dependências
+### 1. Clonar o repositório
 
-pip install opencv-python <br>
-pip install pytesseract <br>
-pip install numpy <br>
-pip install ultralytics <br>
+```bash
+git clone <url-do-repositorio>
+cd deteccao-placas-veiculares
+```
 
+### 2. Criar e ativar ambiente virtual (recomendado)
 
-### 2 Configurar Arduino
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/macOS
+source .venv/bin/activate
+```
+
+### 3. Instalar dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Nota:** a instalação do PyTorch pode variar conforme o sistema e a presença de GPU. Consulte [pytorch.org](https://pytorch.org/get-started/locally/) se necessário.
+
+### 4. Executar a detecção em uma imagem
+
+```bash
+python src/detect.py
+```
+
+O resultado será salvo automaticamente na pasta `runs/` gerada pelo YOLO.
+
+### 5. Recortar a região da placa detectada
+
+```bash
+python src/crop.py
+```
+
+O recorte será salvo como `placa_recortada.jpg` no diretório raiz.
+
+### 6. Configurar Arduino *(etapa futura)*
 
 1. Conectar o Arduino via USB
 2. Abrir o Arduino IDE
-3. Carregar o arquivo:
-<Strong>Arquivo em desenvolvimento </Strong>
+3. Carregar o arquivo de controle do servo *(em desenvolvimento)*
 4. Fazer upload do arquivo para o Arduino
-
-### 3 Executar o sistema
-
-O sistema iniciará a captura de vídeo e realizará a validação das placas automaticamente.
 
 ---
 
 # Estrutura do Projeto
-<h2> Estrutura do Projeto</h2>
 
 <pre>
-GateVision
-
-
-├── database
-│   └── placas.db
+deteccao-placas-veiculares/
 │
-├── python
-│   ├── captura_camera.py
-│   ├── reconhecimento_placa.py
-│   ├── validacao_bd.py
-│   └── comunicacao_arduino.py
+├── models/
+│   └── best.pt               # Modelo YOLO treinado para detecção de placas
 │
-├── arduino
-│   └── controle_servo.ino
+├── samples/
+│   └── teste.jpg             # Imagem de exemplo para testes
 │
-├── web
-│   ├── index.html
-│   ├── cadastro_placa.html
-│   └── style.css
+├── src/
+│   ├── detect.py             # Detecção de placas em imagem com YOLO
+│   └── crop.py               # Recorte da região da placa detectada
 │
+├── requirements.txt          # Dependências do projeto
+├── .gitignore
 └── README.md
 </pre>
 
-
 ---
 
-#  Desenvolvedores
+# Desenvolvedores
 
 | [<img src="https://avatars.githubusercontent.com/u/225480160?v=4" width=115><br><sub>Roger Oliveira</sub>](https://github.com/rcoliveirasb) |
 | :---: |
@@ -194,13 +230,12 @@ GateVision
 | [<img src="https://avatars.githubusercontent.com/u/137013359?v=4" width=115><br><sub>Luiz Wessel</sub>](https://github.com/Wessel2007) |
 | :---: |
 
-
 Estudantes de Inteligência Artificial.
 
 ---
 
 # Licença
 
-Projeto desenvolvido para fins **acadêmicos e educacionais**. 
+Projeto desenvolvido para fins **acadêmicos e educacionais**.
 
 Todos os direitos reservados ©.
